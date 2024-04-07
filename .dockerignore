@@ -1,0 +1,12 @@
+// ignore venv folder 
+
+*/venv/*
+*/images/*
+*/.vscode/*
+*/.idea/*
+*/.git/*
+*/.gitignore
+*/.gitattributes
+*/.DS_Store
+*/.pytest_cache/*
+**/target/*
