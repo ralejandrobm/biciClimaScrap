@@ -8,3 +8,4 @@ fastapi==0.100.1
 uvicorn==0.23.1
 pydantic==2.1.1
 orange3==3.35.0
+PyQt5>=5.15.5
