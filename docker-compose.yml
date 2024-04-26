@@ -25,7 +25,7 @@ services:
 
   cron-scrap-mibici:
     container_name: scrap-mibici
-    image: scrap-mibici:latest
+    image: api-ia-aws:latest
     volumes:
       - ./images:/app/images
       - ./logs:/app/logs
