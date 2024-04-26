@@ -23,6 +23,16 @@ services:
       - web
     command: [ "python", "app.py", "--app", "ApiApp" ]
 
+  cron-scrap-mibici:
+    container_name: scrap-mibici
+    image: scrap-mibici:latest
+    volumes:
+      - ./images:/app/images
+      - ./logs:/app/logs
+      - ./assets:/app/assets
+      - ./src:/app/src
+    environment:
+      - CRON_FILE_NAME=scrapmibici
 
 networks:
   web:
