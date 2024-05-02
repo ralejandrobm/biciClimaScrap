@@ -9,3 +9,6 @@ uvicorn==0.23.1
 pydantic==2.1.1
 orange3==3.35.0
 PyQt5>=5.15.5
+openmeteo_requests==1.2.0
+requests_cache==1.2.0
+retry_requests==2.0.0
