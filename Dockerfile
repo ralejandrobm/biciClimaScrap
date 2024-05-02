@@ -10,7 +10,6 @@ RUN apt-get update
 
 RUN apt-get install -y cron
 
-
 ENV DISPLAY=:99
 
 COPY requirements.txt .

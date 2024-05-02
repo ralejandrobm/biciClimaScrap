@@ -12,9 +12,9 @@ services:
       - ./src:/app/src
     environment:
       PORT: 8000
-      VIRTUAL_HOST: 0.0.0.0, 127.0.0.1,
+      VIRTUAL_HOST: 0.0.0.0, 127.0.0.1, 44.205.83.127, alex.ralejandro.com
       VIRTUAL_PORT: 8000
-      LETSENCRYPT_HOST: algo.ralejandro.com
+      LETSENCRYPT_HOST: alex.ralejandro.com
       LETSENCRYPT_EMAIL: ralejandrobm@gmail.com
     ports:
       - '8000:8000'
