@@ -25,7 +25,7 @@ class Scrapmibici:
         dir_codigo = os.path.dirname(os.path.realpath(__file__)) 
         carpeta_raiz = 'datos_clima'
         carpeta_ciudad = ciudad
-        folder = os.path.join(dir_codigo, carpeta_raiz, carpeta_ciudad, current_date)
+        folder = os.path.join('assets', carpeta_raiz, carpeta_ciudad, current_date)
         os.makedirs(folder, exist_ok=True)
         
         # Setup the Open-Meteo API client with cache and retry on error
