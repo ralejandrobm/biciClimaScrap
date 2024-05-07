@@ -1,7 +1,6 @@
 from src.main import App
 from src.apps.api_app.ApiApp import ApiApp
 from src.apps.scrap_mibici.Scrapmibici import Scrapmibici
-from src.apps.mibici.MiBici import MiBici
 from src.apps.openmeteo.OpenMeteo import OpenMeteo
 
 import argparse
@@ -40,10 +39,6 @@ def main():
         om.start()
         return
     
-    if app_name == "MiBici":
-        mb = MiBici()
-        mb.start()
-        return
 
 
 if __name__ == "__main__":
