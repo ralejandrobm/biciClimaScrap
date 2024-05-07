@@ -12,3 +12,7 @@ PyQt5>=5.15.5
 openmeteo_requests==1.2.0
 requests_cache==1.2.0
 retry_requests==2.0.0
+requests==2.31.0
+beautifulsoup4==4.12.3
+PyMongo==4.7.1
+
