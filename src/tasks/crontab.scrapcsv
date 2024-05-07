@@ -1,0 +1,1 @@
+0 7 * * * /usr/local/bin/python3 /app/app.py -app Scrapmibici >> /app/logs/output-scrapmibici.txt 2>> /app/logs/errors-scrapmibici.txt
