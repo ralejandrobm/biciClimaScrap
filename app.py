@@ -1,6 +1,7 @@
 from src.main import App
 from src.apps.api_app.ApiApp import ApiApp
 from src.apps.scrap_mibici.Scrapmibici import Scrapmibici
+from src.apps.scrap_csv.Scrapcsv import MiBiciScraper
 
 import argparse
 
@@ -33,6 +34,10 @@ def main():
         scrapmibici = Scrapmibici()
         scrapmibici.start()
         return
+    
+    if app_name == "Scrapcsv":
+        scraper = MiBiciScraper()
+        scraper.start()
 
 
 if __name__ == "__main__":
