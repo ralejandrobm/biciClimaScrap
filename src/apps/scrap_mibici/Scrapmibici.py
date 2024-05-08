@@ -11,8 +11,8 @@ from pymongo.server_api import ServerApi
 
 class Scrapmibici:
     def __init__(self):
-        self.url_bicis = "assets/datos_bicis/"
-        self.url_clima = "assets/datos_clima/"
+        self.url_bicis = "/app/assets/datos_bicis/"
+        self.url_clima = "/app/assets/datos_clima/"
 
     def archivo_info_bicis(self):
         files = os.listdir(self.url_bicis)
