@@ -14,5 +14,6 @@ requests_cache==1.2.0
 retry_requests==2.0.0
 requests==2.31.0
 beautifulsoup4==4.12.3
+lxml==5.2.1
 PyMongo==4.7.1
 
