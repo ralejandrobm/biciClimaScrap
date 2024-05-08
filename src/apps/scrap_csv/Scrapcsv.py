@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 
 class MiBiciScraper:
     
-    def __init__(self, url_mibici='https://www.mibici.net/es/datos-abiertos/', csv_directory='assets\csv', links_file='assets\csv\links.txt'):
+    def __init__(self, url_mibici='https://www.mibici.net/es/datos-abiertos/', csv_directory='/app/assets/csv', links_file='/app/assets/csv/links.txt'):
         self.url_mibici = url_mibici
         self.csv_directory = csv_directory
         self.links_file = links_file
