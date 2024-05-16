@@ -17,8 +17,9 @@ class Scrapmibici:
     def archivo_info_bicis(self):
         files = os.listdir(self.url_bicis)
         if files:
-            files.sort(key=lambda x: os.path.getmtime(os.path.join(self.url_bicis, x)))
-            return os.path.join(self.url_bicis,files[-1])
+           # files.sort(key=lambda x: os.path.getmtime(os.path.join(self.url_bicis, x)))
+           # return os.path.join(self.url_bicis,files[-1])
+           return "nomenclatura_2024_03.csv"
         else:
             return None
 
