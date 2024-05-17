@@ -11,20 +11,26 @@ class Scrapmibici:
     def __init__(self):
         self.url_bicis = "/app/assets/csv/"
         self.url_clima = "/app/assets/datos_clima/"
+        self.url_assets= "/app/assets/"
 
     def archivo_info_bicis(self):
         files = os.listdir(self.url_bicis)
         if files:
-           # files.sort(key=lambda x: os.path.getmtime(os.path.join(self.url_bicis, x)))
            return os.path.join(self.url_bicis,"nomenclatura_2024_03.csv")
         else:
             return None
 
     def fusion_bicis(self):
+
+        exclude_path = "assets/csv/nomenclatura"
         dfs = []
         csv_files = [file_name for file_name in os.listdir(self.url_bicis) if file_name.endswith('.csv')]
-        csv_files_except_last = csv_files[:-1] #Excluye el último archivo
-        for file_name in csv_files_except_last:
+        
+        # Excluir archivos en la ruta especificada
+        csv_files = [file_name for file_name in csv_files if not file_name.startswith("nomenclatura")]
+        
+      
+        for file_name in csv_files:
             file_path = os.path.join(self.url_bicis, file_name)
             df = pd.read_csv(file_path,encoding='latin-1', header=0)
             dfs.append(df)
@@ -73,10 +79,14 @@ class Scrapmibici:
         cliente = MongoClient(uri,server_api=ServerApi('1'))
         db = cliente.BiciClima
         col = db.MiBiciClima
+        
+        contador = 0
         with open(ruta_csv, 'r',encoding='latin-1') as file:
             reader = csv.DictReader(file)
             for row in reader:
                 col.insert_one(row)
+                contador= contador+1
+                print("inserto registro " + str(contador))
         print('Datos subidos con éxito')
 
     def start(self):
@@ -88,9 +98,9 @@ class Scrapmibici:
             filtered_df = df_bicis[df_bicis['name'].str.contains(lugar, regex=True)]
             dfs_dict[lugar] = filtered_df
 
-        df_bicis_gdl = dfs_dict['GDL']
-        df_bicis_zpn = dfs_dict['ZPN']
-        df_bicis_tlq = dfs_dict['TLQ']
+        df_bicis_gdl = dfs_dict['GDL'].copy()
+        df_bicis_zpn = dfs_dict['ZPN'].copy()
+        df_bicis_tlq = dfs_dict['TLQ'].copy()
 
         df_bicis_gdl['Inicio_del_viaje'] = pd.to_datetime(df_bicis_gdl['Inicio_del_viaje']).dt.tz_localize(None)
         df_bicis_zpn['Inicio_del_viaje'] = pd.to_datetime(df_bicis_zpn['Inicio_del_viaje']).dt.tz_localize(None)
@@ -116,7 +126,7 @@ class Scrapmibici:
         df_zpn = pd.merge_asof(df_bicis_zpn, df_clima_zpn, left_on='Inicio_del_viaje', right_on='date')
         df_tlq = pd.merge_asof(df_bicis_tlq, df_clima_tlq, left_on='Inicio_del_viaje', right_on='date')
 
-        ruta = "assets/datos_finales/"
+        ruta = self.url_assets +"datos_finales/"
         if not os.path.exists(ruta):
             os.makedirs(ruta)
         df_gdl.to_csv(ruta+"datos_guadalajara.csv", index=False)
@@ -125,6 +135,8 @@ class Scrapmibici:
 
         csv_final = pd.concat([df_gdl,df_zpn,df_tlq],ignore_index=True)
         csv_final.to_csv(ruta+"datos_finales.csv", index=False)
+
+        print ("se juntaron los archivos")
 
         self.subir_datos_a_mongo(ruta+"datos_finales.csv")
 
