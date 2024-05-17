@@ -22,7 +22,7 @@ class Scrapmibici:
 
     def fusion_bicis(self):
 
-        exclude_path = "assets/csv/nomenclatura"
+        exclude_path = "/app/assets/csv/nomenclatura"
         dfs = []
         csv_files = [file_name for file_name in os.listdir(self.url_bicis) if file_name.endswith('.csv')]
         
