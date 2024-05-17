@@ -1,8 +1,6 @@
 import csv
 import os
 import pandas as pd
-#from OpenMeteo import OpenMeteo
-#from MiBici import MiBici
 
 
 from pymongo import MongoClient
@@ -18,8 +16,7 @@ class Scrapmibici:
         files = os.listdir(self.url_bicis)
         if files:
            # files.sort(key=lambda x: os.path.getmtime(os.path.join(self.url_bicis, x)))
-           # return os.path.join(self.url_bicis,files[-1])
-           return "nomenclatura_2024_03.csv"
+           return os.path.join(self.url_bicis,"nomenclatura_2024_03.csv")
         else:
             return None
 
