@@ -1,124 +1,143 @@
-import openmeteo_requests
+import csv
 import os
-import requests_cache
-import pandas as pd 
-from retry_requests import retry
-from datetime import datetime
+import pandas as pd
+
+
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
 
 
 class Scrapmibici:
+    def __init__(self):
+        self.url_bicis = "/app/assets/csv/"
+        self.url_clima = "/app/assets/datos_clima/"
+        self.url_assets= "/app/assets/"
 
-    ciudades = {
-    "Guadalajara": (20.659698, -103.349609), 
-    "Zapopan": (20.671955, -103.416504) ,
-    "Tlaquepaque": (20.64091, -103.29327)
-    }
+    def archivo_info_bicis(self):
+        files = os.listdir(self.url_bicis)
+        if files:
+           return os.path.join(self.url_bicis,"nomenclatura_2024_03.csv")
+        else:
+            return None
+
+    def fusion_bicis(self):
+
+        exclude_path = "/app/assets/csv/nomenclatura"
+        dfs = []
+        csv_files = [file_name for file_name in os.listdir(self.url_bicis) if file_name.endswith('.csv')]
+        
+        # Excluir archivos en la ruta especificada
+        csv_files = [file_name for file_name in csv_files if not file_name.startswith("nomenclatura")]
+        
+      
+        for file_name in csv_files:
+            file_path = os.path.join(self.url_bicis, file_name)
+            df = pd.read_csv(file_path,encoding='latin-1', header=0)
+            dfs.append(df)
+        bicis_fusionadas = pd.concat(dfs, ignore_index=True)
+        return bicis_fusionadas
+
+    def anadir_lugar(self):
+        ruta_info = self.archivo_info_bicis()
+        df_info_bicis = pd.read_csv(ruta_info, encoding='latin-1', header=0)
+        df_bicis = (self.fusion_bicis())
+        merged_df = pd.merge(df_bicis, df_info_bicis, left_on='Origen_Id', right_on='id', how='left')
+        return merged_df
+
+    def datos_clima_gdl(self):
+        ruta = self.url_clima+"Guadalajara"
+        dfs = []
+        for root,dirs,files in os.walk(ruta):
+            for file in files:
+                if "hourly_data" in file and file.endswith(".csv"):
+                    df = pd.read_csv(os.path.join(root,file),encoding='latin-1', header=0)
+                    dfs.append(df)
+        return pd.concat(dfs, ignore_index=True)
+
+    def datos_clima_tlq(self):
+        ruta = self.url_clima + "Tlaquepaque"
+        dfs = []
+        for root, dirs, files in os.walk(ruta):
+            for file in files:
+                if "hourly_data" in file and file.endswith(".csv"):
+                    df = pd.read_csv(os.path.join(root, file), encoding='latin-1', header=0)
+                    dfs.append(df)
+        return pd.concat(dfs, ignore_index=True)
+
+    def datos_clima_zpn(self):
+        ruta = self.url_clima + "Zapopan"
+        dfs = []
+        for root, dirs, files in os.walk(ruta):
+            for file in files:
+                if "hourly_data" in file and file.endswith(".csv"):
+                    df = pd.read_csv(os.path.join(root, file), encoding='latin-1', header=0)
+                    dfs.append(df)
+        return pd.concat(dfs, ignore_index=True)
+
+    def subir_datos_a_mongo(self,ruta_csv):
+        uri = "mongodb+srv://porosengineers:Oy8ngC5FVvOFqKcZ@biciclimacluster.yyakcv9.mongodb.net/?retryWrites=true&w=majority&appName=BiciClimaCluster"
+        cliente = MongoClient(uri,server_api=ServerApi('1'))
+        db = cliente.BiciClima
+        col = db.MiBiciClima
+        
+        contador = 0
+        with open(ruta_csv, 'r',encoding='latin-1') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                col.insert_one(row)
+                contador= contador+1
+                print("inserto registro " + str(contador))
+        print('Datos subidos con éxito')
 
     def start(self):
-        for ciudad, coordenadas in self.ciudades.items(): 
-            if not self.consulta_api(coordenadas[0], coordenadas[1], ciudad): 
-                print(f"Error al obtener los datos para {ciudad}.")
+        df_bicis = self.anadir_lugar()
+        #separar el clima en lugares
+        lugares = ['GDL','ZPN','TLQ']
+        dfs_dict = {}
+        for lugar in lugares:
+            filtered_df = df_bicis[df_bicis['name'].str.contains(lugar, regex=True)]
+            dfs_dict[lugar] = filtered_df
 
+        df_bicis_gdl = dfs_dict['GDL'].copy()
+        df_bicis_zpn = dfs_dict['ZPN'].copy()
+        df_bicis_tlq = dfs_dict['TLQ'].copy()
 
-    def consulta_api(self, latitude, longitude, ciudad):
-        current_date = datetime.now().strftime('%Y-%m-%d')
-        dir_codigo = os.path.dirname(os.path.realpath(__file__)) 
-        carpeta_raiz = 'datos_clima'
-        carpeta_ciudad = ciudad
-        folder = os.path.join('assets', carpeta_raiz, carpeta_ciudad, current_date)
-        os.makedirs(folder, exist_ok=True)
-        
-        # Setup the Open-Meteo API client with cache and retry on error
-        cache_session = requests_cache.CachedSession('.cache', expire_after = 3600)
-        retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
-        openmeteo = openmeteo_requests.Client(session = retry_session)
+        df_bicis_gdl['Inicio_del_viaje'] = pd.to_datetime(df_bicis_gdl['Inicio_del_viaje']).dt.tz_localize(None)
+        df_bicis_zpn['Inicio_del_viaje'] = pd.to_datetime(df_bicis_zpn['Inicio_del_viaje']).dt.tz_localize(None)
+        df_bicis_tlq['Inicio_del_viaje'] = pd.to_datetime(df_bicis_tlq['Inicio_del_viaje']).dt.tz_localize(None)
 
-        # Make sure all required weather variables are listed here
-        # The order of variables in hourly or daily is important to assign them correctly below
-        url = "https://api.open-meteo.com/v1/forecast"	
-        params = {
-            "latitude": latitude,
-            "longitude": longitude,
-            "hourly": ["temperature_2m", "precipitation_probability", "wind_speed_10m", "uv_index", "uv_index_clear_sky", "is_day", "sunshine_duration", "direct_radiation"],
-            "daily": ["temperature_2m_max", "temperature_2m_min", "sunrise", "sunset", "daylight_duration", "sunshine_duration", "uv_index_max", "uv_index_clear_sky_max", "precipitation_probability_max"],
-            "timezone": "auto",
-            "past_days": 31,
-            "forecast_days": 1
-        }
-        responses = openmeteo.weather_api(url, params=params)
+        df_clima_gdl = self.datos_clima_gdl()
+        df_clima_zpn = self.datos_clima_zpn()
+        df_clima_tlq = self.datos_clima_tlq()
 
-        # Process first location. Add a for-loop for multiple locations or weather models
-        response = responses[0]
-        print(f"Coordinates {response.Latitude()}°N {response.Longitude()}°E")
-        print(f"Elevation {response.Elevation()} m asl")
-        print(f"Timezone {response.Timezone()} {response.TimezoneAbbreviation()}")
-        print(f"Timezone difference to GMT+0 {response.UtcOffsetSeconds()} s")
+        df_clima_gdl['date'] = pd.to_datetime(df_clima_gdl['date']).dt.tz_localize(None)
+        df_clima_zpn['date'] = pd.to_datetime(df_clima_zpn['date']).dt.tz_localize(None)
+        df_clima_tlq['date'] = pd.to_datetime(df_clima_tlq['date']).dt.tz_localize(None)
 
-        # Process hourly data. The order of variables needs to be the same as requested.
-        hourly = response.Hourly()
-        hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
-        hourly_precipitation_probability = hourly.Variables(1).ValuesAsNumpy()
-        hourly_wind_speed_10m = hourly.Variables(2).ValuesAsNumpy()
-        hourly_uv_index = hourly.Variables(3).ValuesAsNumpy()
-        hourly_uv_index_clear_sky = hourly.Variables(4).ValuesAsNumpy()
-        hourly_is_day = hourly.Variables(5).ValuesAsNumpy()
-        hourly_sunshine_duration = hourly.Variables(6).ValuesAsNumpy()
-        hourly_direct_radiation = hourly.Variables(7).ValuesAsNumpy()
+        df_bicis_gdl = df_bicis_gdl.sort_values('Inicio_del_viaje')
+        df_bicis_zpn = df_bicis_zpn.sort_values('Inicio_del_viaje')
+        df_bicis_tlq = df_bicis_tlq.sort_values('Inicio_del_viaje')
 
-        hourly_data = {"date": pd.date_range(
-            start = pd.to_datetime(hourly.Time(), unit = "s", utc = True),
-            end = pd.to_datetime(hourly.TimeEnd(), unit = "s", utc = True),
-            freq = pd.Timedelta(seconds = hourly.Interval()),
-            inclusive = "left"
-        )}
-        hourly_data["temperature_2m"] = hourly_temperature_2m
-        hourly_data["precipitation_probability"] = hourly_precipitation_probability
-        hourly_data["wind_speed_10m"] = hourly_wind_speed_10m
-        hourly_data["uv_index"] = hourly_uv_index
-        hourly_data["uv_index_clear_sky"] = hourly_uv_index_clear_sky
-        hourly_data["is_day"] = hourly_is_day
-        hourly_data["sunshine_duration"] = hourly_sunshine_duration
-        hourly_data["direct_radiation"] = hourly_direct_radiation
+        df_clima_gdl = df_clima_gdl.sort_values('date')
+        df_clima_zpn = df_clima_zpn.sort_values('date')
+        df_clima_tlq = df_clima_tlq.sort_values('date')
 
-        hourly_dataframe = pd.DataFrame(data = hourly_data)
-        #print(hourly_dataframe)
+        df_gdl = pd.merge_asof(df_bicis_gdl, df_clima_gdl, left_on='Inicio_del_viaje', right_on='date')
+        df_zpn = pd.merge_asof(df_bicis_zpn, df_clima_zpn, left_on='Inicio_del_viaje', right_on='date')
+        df_tlq = pd.merge_asof(df_bicis_tlq, df_clima_tlq, left_on='Inicio_del_viaje', right_on='date')
 
-        # Process daily data. The order of variables needs to be the same as requested.
-        daily = response.Daily()
-        daily_temperature_2m_max = daily.Variables(0).ValuesAsNumpy()
-        daily_temperature_2m_min = daily.Variables(1).ValuesAsNumpy()
-        daily_sunrise = daily.Variables(2).ValuesAsNumpy()
-        daily_sunset = daily.Variables(3).ValuesAsNumpy()
-        daily_daylight_duration = daily.Variables(4).ValuesAsNumpy()
-        daily_sunshine_duration = daily.Variables(5).ValuesAsNumpy()
-        daily_uv_index_max = daily.Variables(6).ValuesAsNumpy()
-        daily_uv_index_clear_sky_max = daily.Variables(7).ValuesAsNumpy()
-        daily_precipitation_probability_max = daily.Variables(8).ValuesAsNumpy()
+        ruta = self.url_assets +"datos_finales/"
+        if not os.path.exists(ruta):
+            os.makedirs(ruta)
+        df_gdl.to_csv(ruta+"datos_guadalajara.csv", index=False)
+        df_zpn.to_csv(ruta+"datos_zapopan.csv", index=False)
+        df_tlq.to_csv(ruta+"datos_tlaquepaque.csv", index=False)
 
-        daily_data = {"date": pd.date_range(
-            start = pd.to_datetime(daily.Time(), unit = "s", utc = True),
-            end = pd.to_datetime(daily.TimeEnd(), unit = "s", utc = True),
-            freq = pd.Timedelta(seconds = daily.Interval()),
-            inclusive = "left"
-        )}
-        daily_data["temperature_2m_max"] = daily_temperature_2m_max
-        daily_data["temperature_2m_min"] = daily_temperature_2m_min
-        daily_data["sunrise"] = daily_sunrise
-        daily_data["sunset"] = daily_sunset
-        daily_data["daylight_duration"] = daily_daylight_duration
-        daily_data["sunshine_duration"] = daily_sunshine_duration
-        daily_data["uv_index_max"] = daily_uv_index_max
-        daily_data["uv_index_clear_sky_max"] = daily_uv_index_clear_sky_max
-        daily_data["precipitation_probability_max"] = daily_precipitation_probability_max
+        csv_final = pd.concat([df_gdl,df_zpn,df_tlq],ignore_index=True)
+        csv_final.to_csv(ruta+"datos_finales.csv", index=False)
 
-        daily_dataframe = pd.DataFrame(data = daily_data)
-        #print(daily_dataframe)
-    
-        if hourly_dataframe.empty and daily_dataframe.empty:
-            print("No se obtuvieron datos de la API.")
-            return False
-        else:
-            print(f"Datos de {ciudad} obtenidos correctamente.\n")
-            hourly_dataframe.to_csv(os.path.join(folder, f'hourly_data_{current_date}.csv'), index=False)
-            daily_dataframe.to_csv(os.path.join(folder, f'daily_data_{current_date}.csv'), index=False)
-            return True
+        print ("se juntaron los archivos")
+
+        self.subir_datos_a_mongo(ruta+"datos_finales.csv")
+
+        print(f"Datos descargados y organizados en el directorio {ruta}")

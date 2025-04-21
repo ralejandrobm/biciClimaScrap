@@ -34,6 +34,30 @@ services:
     environment:
       - CRON_FILE_NAME=scrapmibici
 
+
+  cron-scrap-csv:
+    container_name: scrap-csv
+    image: api-ia-aws:latest
+    volumes:
+      - ./images:/app/images
+      - ./logs:/app/logs
+      - ./assets:/app/assets
+      - ./src:/app/src
+    environment:
+      - CRON_FILE_NAME=openmeteo
+
+  cron-scrap-openmeteo:
+    container_name: open-meteo
+    image: api-ia-aws:latest
+    volumes:
+      - ./images:/app/images
+      - ./logs:/app/logs
+      - ./assets:/app/assets
+      - ./src:/app/src
+    environment:
+      - CRON_FILE_NAME=scrapcsv
+
+
 networks:
   web:
     external: true
